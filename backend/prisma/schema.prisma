@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --------------------------------------------------
+// Bismillah! Yahan se hamara naya fresh schema shuru hoga
+// --------------------------------------------------
+
+enum Role {
+  STUDENT
+  TASKER
+  ADMIN
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  fullName       String
+  role           Role     @default(STUDENT)
+  isVerified     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
