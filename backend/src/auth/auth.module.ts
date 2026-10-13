@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { AuthController } from './auth.controller.js';
+import { TaskerAuthController } from './controllers/tasker-auth.controller.js';
+import { ClientAuthController } from './controllers/client-auth.controller.js';
+import { AdminAuthController } from './controllers/admin-auth.controller.js';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategy/jwt.strategy.js';
 
@@ -12,7 +14,11 @@ import { JwtStrategy } from './strategy/jwt.strategy.js';
     }),
   ],
   providers: [AuthService, JwtStrategy],
-  controllers: [AuthController],
+  controllers: [
+    TaskerAuthController,
+    ClientAuthController,
+    AdminAuthController,
+  ],
+  exports: [AuthService],
 })
 export class AuthModule {}
-

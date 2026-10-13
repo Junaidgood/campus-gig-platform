@@ -15,20 +15,20 @@ export class RolesGuard implements CanActivate {
     ]);
 
     if (!requiredRoles) {
-      return true; // Agar route par koi tag nahi laga, to sub ko aane do
+      return true; // If no specific role is required, allow access
     }
 
-    // 2. Request se User nikaalo (Jo JwtStrategy ne yahan chipkaya tha)
+    // 2. Extract user from request (attached by JwtStrategy)
     const { user } = context.switchToHttp().getRequest();
 
     if (!user) {
-      throw new ForbiddenException('Login karna zaroori hai');
+      throw new ForbiddenException('Authentication required');
     }
 
     // 3. Match the User Role
     const hasRole = requiredRoles.includes(user.role);
     if (!hasRole) {
-      throw new ForbiddenException('Aapko is action ki ijazat nahi hai!');
+      throw new ForbiddenException('You do not have permission to perform this action!');
     }
 
     return true;

@@ -2,18 +2,18 @@ import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength } from 'class
 import { Role } from '@prisma/client';
 
 export class RegisterDto {
-  @IsEmail({}, { message: 'Email ka format theek nahi hai' })
-  @Matches(/@ucp\.edu\.pk$/, { message: 'Sirf @ucp.edu.pk wali university email allowed hai' })
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Matches(/@ucp\.edu\.pk$/, { message: 'Only @ucp.edu.pk university email addresses are allowed' })
   email: string;
 
   @IsString()
-  @MinLength(6, { message: 'Password kam az kam 6 characters ka hona chahiye' })
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Naam likhna zaroori hai' })
+  @IsNotEmpty({ message: 'Full name is required' })
   fullName: string;
 
-  @IsEnum(Role, { message: 'Role sirf STUDENT, TASKER ya ADMIN ho sakta hai' })
+  @IsEnum(Role, { message: 'Role must be STUDENT, TASKER, or ADMIN' })
   role: Role;
 }

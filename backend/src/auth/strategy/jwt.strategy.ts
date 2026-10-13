@@ -6,14 +6,14 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
-      // Token kahan se aayega? (Headers mein Bearer Token se)
+      // Extract JWT from Bearer Token in authorization headers
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false, // Expire hone ke baad token ko reject kar do
+      ignoreExpiration: false, // Reject token if expired
       secretOrKey: process.env.JWT_SECRET || 'fallback_secret',
     });
   }
 
-  // Agar token bilkul theek hai, to yeh function chalega aur payload ko Request object mein daal dega
+  // If token is valid, this callback is executed and injects payload into the Request object
   async validate(payload: any) {
     return { 
       userId: payload.sub, 

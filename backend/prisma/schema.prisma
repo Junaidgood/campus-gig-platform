@@ -9,22 +9,283 @@ datasource db {
 }
 
 // --------------------------------------------------
-// Bismillah! Yahan se hamara naya fresh schema shuru hoga
+// Enums
 // --------------------------------------------------
 
 enum Role {
-  STUDENT
+  CLIENT
   TASKER
   ADMIN
 }
 
+enum GigStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderStatus {
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT
+  ESCROW_LOCK
+  ORDER_PAYOUT
+  PLATFORM_FEE
+  WITHDRAWAL
+  REFUND
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  GIG_APPROVED
+  GIG_REJECTED
+  ORDER_RECEIVED
+  ORDER_DELIVERED
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  PAYMENT_RECEIVED
+  WITHDRAWAL_APPROVED
+  WITHDRAWAL_REJECTED
+  NEW_MESSAGE
+  NEW_REVIEW
+  SYSTEM
+}
+
+// --------------------------------------------------
+// Models
+// --------------------------------------------------
+
 model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  password       String
-  fullName       String
-  role           Role     @default(STUDENT)
-  isVerified     Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String
+  fullName        String
+  role            Role     @default(CLIENT)
+  isVerified      Boolean  @default(false)
+
+  // Profile Information
+  bio             String?
+  skills          String[] @default([])
+  department      String?
+  semester        Int?
+  avatarUrl       String?
+  githubUrl       String?
+  linkedinUrl     String?
+  phone           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relation: Aik user ki banayi hui Gigs (Tasker banayega)
+  gigs            Gig[]
+
+  // Relation: User as Client placing orders
+  clientOrders    Order[]  @relation("ClientOrders")
+
+  // Relation: User as Tasker receiving orders
+  taskerOrders    Order[]  @relation("TaskerOrders")
+
+  // Relation: User ka Wallet
+  wallet          Wallet?
+
+  // Relation: Tasker ki Withdrawal requests
+  withdrawals     WithdrawalRequest[]
+
+  // Relation: Client ke diye hue reviews
+  givenReviews    Review[] @relation("ClientReviews")
+
+  // Relation: Tasker ke receive kiye hue reviews
+  receivedReviews Review[] @relation("TaskerReviews")
+
+  // Relation: User ki chats / conversations
+  conversationsAsUser1 Conversation[] @relation("User1Conversations")
+  conversationsAsUser2 Conversation[] @relation("User2Conversations")
+  sentMessages         Message[]
+
+  // Relation: User ki notifications
+  notifications   Notification[]
+}
+
+model Gig {
+  id           String     @id @default(uuid())
+  title        String
+  description  String
+  price        Int
+  deliveryTime Int        // e.g., 2 (days)
+  status       GigStatus  @default(PENDING)
+  
+  // Relation: Yeh gig kis tasker (user) ne banayi hai
+  taskerId     String
+  tasker       User       @relation(fields: [taskerId], references: [id])
+
+  // Relation: Is gig par kitne orders aaye
+  orders       Order[]
+
+  // Relation: Is gig par kitne reviews aaye
+  reviews      Review[]
+
+  // Relation: Is gig ke baare me conversations
+  conversations Conversation[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Order {
+  id           String       @id @default(uuid())
+  requirements String?
+  price        Int
+  status       OrderStatus  @default(IN_PROGRESS)
+  deliveryDate DateTime?
+  deliveryNote String?      // Submission message ya link (GitHub, Google Drive wagaira)
+
+  // Relations
+  gigId        String
+  gig          Gig          @relation(fields: [gigId], references: [id])
+
+  clientId     String
+  client       User         @relation("ClientOrders", fields: [clientId], references: [id])
+
+  taskerId     String
+  tasker       User         @relation("TaskerOrders", fields: [taskerId], references: [id])
+
+  // Relation: Order se judi transactions
+  transactions Transaction[]
+
+  // Relation: Order par diya gaya review (Sirf 1 review per order)
+  review       Review?
+
+  // Relation: Is order ke baare me conversations
+  conversations Conversation[]
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int      // 1 to 5 stars
+  comment   String   // Review feedback text
+
+  orderId   String   @unique // Har completed order par sirf 1 review
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  gigId     String
+  gig       Gig      @relation(fields: [gigId], references: [id])
+
+  clientId  String
+  client    User     @relation("ClientReviews", fields: [clientId], references: [id])
+
+  taskerId  String
+  tasker    User     @relation("TaskerReviews", fields: [taskerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Conversation {
+  id            String    @id @default(uuid())
+
+  user1Id       String
+  user1         User      @relation("User1Conversations", fields: [user1Id], references: [id])
+
+  user2Id       String
+  user2         User      @relation("User2Conversations", fields: [user2Id], references: [id])
+
+  gigId         String?
+  gig           Gig?      @relation(fields: [gigId], references: [id])
+
+  orderId       String?
+  order         Order?    @relation(fields: [orderId], references: [id])
+
+  lastMessageAt DateTime  @default(now())
+  messages      Message[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([user1Id, user2Id])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  text           String
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+
+  isRead         Boolean      @default(false)
+
+  createdAt      DateTime     @default(now())
+}
+
+model Wallet {
+  id           String        @id @default(uuid())
+  balance      Int           @default(0) // Available balance in PKR
+
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id])
+
+  transactions Transaction[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  amount      Int
+  type        TransactionType
+  description String?
+
+  walletId    String
+  wallet      Wallet          @relation(fields: [walletId], references: [id])
+
+  orderId     String?
+  order       Order?          @relation(fields: [orderId], references: [id])
+
+  createdAt   DateTime        @default(now())
+}
+
+model WithdrawalRequest {
+  id            String           @id @default(uuid())
+  amount        Int
+  paymentMethod String           // e.g. "JazzCash", "EasyPaisa", "Bank Transfer"
+  accountNumber String           // Phone number ya IBAN
+  accountTitle  String           // Account holder name
+  status        WithdrawalStatus @default(PENDING)
+  adminNote     String?
+
+  taskerId      String
+  tasker        User             @relation(fields: [taskerId], references: [id])
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType @default(SYSTEM)
+  isRead    Boolean          @default(false)
+  link      String?
+
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime         @default(now())
 }
